@@ -25,3 +25,6 @@ npm-debug.log*
 
 # vitest
 coverage/
+
+# also match a node_modules symlink (trailing-slash pattern matches dirs only)
+node_modules
