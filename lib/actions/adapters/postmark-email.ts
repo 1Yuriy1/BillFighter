@@ -31,11 +31,15 @@ export function makePostmarkEmailAdapter(
       }
       const from =
         options.fromAddress ?? process.env.OUTBOUND_FROM_EMAIL ?? "no-reply@billfighter.com";
+      // Production default; the E2E harness points POSTMARK_BASE_URL at the
+      // mock provider so CI records and asserts on outbound messages without
+      // a live Postmark token.
+      const sendUrl = process.env.POSTMARK_BASE_URL ?? POSTMARK_SEND_URL;
       const doFetch = options.fetchImpl ?? fetch;
 
       let response: Response;
       try {
-        response = await doFetch(POSTMARK_SEND_URL, {
+        response = await doFetch(sendUrl, {
           method: "POST",
           headers: {
             Accept: "application/json",

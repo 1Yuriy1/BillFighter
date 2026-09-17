@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { ActionError, approveDraft } from "@/lib/actions/approval";
 import { approveAsUser } from "@/lib/actions/userApproval";
 import { withServiceClient, withSessionClient } from "@/lib/db/connect";
+import { advanceCaseAfterApproval } from "@/lib/pipeline/caseStatus";
 import { currentClaims } from "@/lib/session-server";
 
 /**
@@ -30,12 +31,24 @@ export async function POST(
       const outcome = await withSessionClient(claims, (client) =>
         approveDraft(client, id, "staff", new Date()),
       );
+      if (outcome.status === "completed") {
+        // The staff session holds no UPDATE grant on cases (owner-only
+        // policy) — the gate→in_progress advance rides the service
+        // connection instead of the approval transaction.
+        await withServiceClient((service) => advanceCaseAfterApproval(service, id));
+      }
       return NextResponse.json(outcome);
     }
 
-    const outcome = await withServiceClient(async (service) =>
-      withSessionClient(claims, (session) => approveAsUser(session, service, id, new Date())),
-    );
+    const outcome = await withServiceClient(async (service) => {
+      const result = await withSessionClient(claims, (session) =>
+        approveAsUser(session, service, id, new Date()),
+      );
+      if (result.status === "completed") {
+        await advanceCaseAfterApproval(service, id);
+      }
+      return result;
+    });
     if (outcome.status === "not_accessible") {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
