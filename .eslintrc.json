@@ -1,4 +1,12 @@
 {
   "extends": ["next/core-web-vitals", "next/typescript", "prettier"],
-  "ignorePatterns": ["node_modules/", ".next/", "playwright-report/", "test-results/"]
+  "ignorePatterns": ["node_modules/", ".next/", "playwright-report/", "test-results/"],
+  "overrides": [
+    {
+      "files": ["next-env.d.ts"],
+      "rules": {
+        "@typescript-eslint/triple-slash-reference": "off"
+      }
+    }
+  ]
 }
