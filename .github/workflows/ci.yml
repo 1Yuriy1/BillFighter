@@ -62,7 +62,7 @@ jobs:
       - run: npm test
 
   e2e:
-    name: e2e (playwright: smoke + full pipeline)
+    name: "e2e (playwright: smoke + full pipeline)"
     runs-on: ubuntu-latest
     services:
       postgres:
