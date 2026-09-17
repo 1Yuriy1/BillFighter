@@ -142,7 +142,12 @@ describe("cross-tenant isolation (RLS)", () => {
 });
 
 describe("audit trail (events)", () => {
-  it("writes an events row when a user session mutates a case", async () => {
+  // Migration 007 dropped the table-level audit triggers. They wrote raw
+  // "<table> <op>" rows into the family-visible timeline and made every
+  // case deletion fail (the AFTER DELETE row referenced the case being
+  // deleted and violated events_case_id_fkey). The application writes the
+  // meaningful timeline entries instead — these tests pin that contract.
+  it("keeps raw machine events out of the timeline on case mutations", async () => {
     const inserted = await userA.query<{ id: string }>(
       `insert into cases (user_id, provider_name) values ($1, 'Provider C') returning id`,
       [userAId],
@@ -153,27 +158,18 @@ describe("audit trail (events)", () => {
       "select actor, message from events where case_id = $1",
       [newCaseId],
     );
-    expect(events.rows).toHaveLength(1);
-    expect(events.rows[0]).toMatchObject({ actor: "user", message: "cases insert" });
+    expect(events.rows).toHaveLength(0);
   });
 
-  it("writes an events row on update, with the acting user attributed", async () => {
+  it("keeps raw machine events out of the timeline on updates and document inserts", async () => {
     await userA.query("update cases set status = 'awaiting_approval' where id = $1", [caseAId]);
-
-    const events = await userA.query<{ actor: string; message: string }>(
-      "select actor, message from events where case_id = $1 order by id desc limit 1",
-      [caseAId],
-    );
-    expect(events.rows[0]).toMatchObject({ actor: "user", message: "cases update" });
-  });
-
-  it("writes an events row when a document mutation happens", async () => {
     await admin.query("insert into documents (case_id, doc_type) values ($1, 'reply')", [caseAId]);
-    const events = await userA.query<{ actor: string; message: string }>(
-      "select actor, message from events where case_id = $1 order by id desc limit 1",
+
+    const res = await userA.query<{ actor: string; message: string }>(
+      "select actor, message from events where case_id = $1",
       [caseAId],
     );
-    expect(events.rows[0]).toMatchObject({ actor: "system", message: "documents insert" });
+    expect(res.rows).toHaveLength(0);
   });
 
   it("blocks a user session from writing to the audit log directly", async () => {
@@ -184,13 +180,21 @@ describe("audit trail (events)", () => {
     ).rejects.toThrow();
   });
 
-  it("attributes staff mutations to the staff actor", async () => {
-    await staff.query("update cases set status = 'in_progress' where id = $1", [caseBId]);
-    const res = await staff.query<{ actor: string }>(
-      "select actor from events where case_id = $1 order by id desc limit 1",
-      [caseBId],
+  it("deletes a case cleanly even with events history (the 007 FK fix)", async () => {
+    const inserted = await userA.query<{ id: string }>(
+      `insert into cases (user_id, provider_name) values ($1, 'Provider D') returning id`,
+      [userAId],
     );
-    expect(res.rows[0].actor).toBe("staff");
+    const newCaseId = inserted.rows[0].id;
+    await admin.query(
+      "insert into events (case_id, actor, message) values ($1, 'system', 'timeline entry')",
+      [newCaseId],
+    );
+
+    // Case deletion is an admin/service capability (families hold no DELETE
+    // grant). Before 007 even this delete rolled back: the audit trigger's
+    // AFTER DELETE insert referenced the case row being deleted.
+    await expect(admin.query("delete from cases where id = $1", [newCaseId])).resolves.toBeTruthy();
   });
 });
 
