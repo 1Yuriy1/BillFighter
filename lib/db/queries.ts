@@ -506,3 +506,133 @@ export async function staffFamilyRows(client: Queryable): Promise<StaffFamilyRow
     pausedAt: toIsoOrNull(row.automated_messages_paused_at as Date | null),
   }));
 }
+
+/* ------------------------------------------------------------------ */
+/* Staff: draft review + savings confirmation                          */
+/* ------------------------------------------------------------------ */
+
+export interface StaffDraftReviewRow {
+  id: string;
+  caseLabel: string;
+  caseId: string;
+  recipient: string | null;
+  subject: string | null;
+  body: string | null;
+  citations: DraftCitation[];
+  /** When the family signed — the urgent case in the review section. */
+  userApprovedAt: string | null;
+  createdAt: string;
+}
+
+/**
+ * Drafts awaiting the staff signature, with their bodies and citations —
+ * the staff console's review section (the queue table only links). Runs
+ * under the staff session role; citations degrade to placeholder labels for
+ * documents the session cannot see, exactly as the family dashboard's do.
+ */
+export async function staffDraftReviewRows(client: Queryable): Promise<StaffDraftReviewRow[]> {
+  const rows = await client.query<ActionRow & StaffCaseRow>(
+    `select a.id, a.case_id, a.channel, a.recipient, a.subject, a.body, a.citations,
+            a.status, a.user_approved_at, a.staff_approved_at, a.created_at,
+            c.insurer_name, c.provider_name, c.next_deadline, c.status as case_status
+       from actions a
+       join cases c on c.id = a.case_id
+      where a.status = 'draft' and a.staff_approved_at is null
+      order by (a.user_approved_at is not null) desc, a.created_at`,
+  );
+  if (rows.rows.length === 0) {
+    return [];
+  }
+
+  const docRows = await client.query<DocumentRow>(
+    `select id, case_id, doc_type, created_at
+       from documents
+      where case_id = any($1::uuid[])`,
+    [rows.rows.map((row) => row.case_id)],
+  );
+  const docsById = new Map(docRows.rows.map((doc) => [doc.id, doc]));
+
+  return rows.rows.map((row) => ({
+    id: row.id,
+    caseId: row.case_id,
+    caseLabel: staffCaseLabel(row),
+    recipient: row.recipient,
+    subject: row.subject,
+    body: row.body,
+    citations: parseCitations(row.citations, docsById),
+    userApprovedAt: toIsoOrNull(row.user_approved_at),
+    createdAt: row.created_at.toISOString(),
+  }));
+}
+
+export interface StaffSavingsDocument {
+  id: string;
+  docType: string;
+  createdAt: string;
+}
+
+export interface StaffSavingsRow {
+  caseId: string;
+  caseLabel: string;
+  familyEmail: string;
+  amountDisputed: number | null;
+  /** The case's bill/EOB documents — the proof-confirmation picker's options. */
+  documents: StaffSavingsDocument[];
+}
+
+/**
+ * Resolved cases with no live payment — the staff console's savings-
+ * confirmation section. A charged or skipped case drops out of the query,
+ * so the section shows exactly what still owes a confirmation (the
+ * confirmation itself is idempotent in confirmSavingsAndCharge; this read
+ * is just the queue).
+ */
+export async function staffSavingsRows(client: Queryable): Promise<StaffSavingsRow[]> {
+  const caseRows = await client.query<QueryResultRow>(
+    `select c.id, c.insurer_name, c.provider_name, c.amount_disputed,
+            u.email as family_email
+       from cases c
+       join users u on u.id = c.user_id
+      where c.status = 'resolved'
+        and c.amount_saved is null
+      order by c.created_at desc`,
+  );
+  if (caseRows.rows.length === 0) {
+    return [];
+  }
+
+  const docRows = await client.query<QueryResultRow>(
+    `select id, case_id, doc_type, created_at
+       from documents
+      where case_id = any($1::uuid[])
+        and doc_type in ('bill', 'eob')
+      order by created_at`,
+    [caseRows.rows.map((row) => row.id as string)],
+  );
+  const docsByCase = new Map<string, StaffSavingsDocument[]>();
+  for (const doc of docRows.rows) {
+    const caseId = doc.case_id as string;
+    const list = docsByCase.get(caseId) ?? [];
+    list.push({
+      id: doc.id as string,
+      docType: (doc.doc_type as string) ?? "document",
+      createdAt: (doc.created_at as Date).toISOString(),
+    });
+    docsByCase.set(caseId, list);
+  }
+
+  return caseRows.rows.map((row) => {
+    const caseId = row.id as string;
+    return {
+      caseId,
+      caseLabel: staffCaseLabel({
+        id: caseId,
+        insurer_name: row.insurer_name as string | null,
+        provider_name: row.provider_name as string | null,
+      }),
+      familyEmail: row.family_email as string,
+      amountDisputed: row.amount_disputed === null ? null : Number(row.amount_disputed),
+      documents: docsByCase.get(caseId) ?? [],
+    };
+  });
+}
