@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -11,7 +14,7 @@ concurrency:
 
 jobs:
   lint:
-    name: lint
+    name: lint + typecheck
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,19 +23,14 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run lint
-
-  typecheck:
-    name: typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
+      - name: Lint (zero warnings)
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Format check (Prettier)
+        run: npm run format:check
+      - name: Audit production dependencies (high severity or above fails)
+        run: npm audit --audit-level=high --omit=dev
 
   test:
     name: test (unit + db)
@@ -59,11 +57,28 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Apply migrations (validates the migration applies cleanly)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/*.sql
       - run: npm test
 
   e2e:
     name: e2e (playwright smoke)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: billfighter_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/billfighter_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -71,6 +86,18 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Apply migrations (seed for DB-dependent E2E)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/migrations/*.sql
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run e2e
+      - name: Get Playwright version
+        id: pw-version
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.pw-version.outputs.version }}
+      - name: Install Chromium (idempotent when cache hits)
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright
+        run: npm run e2e
