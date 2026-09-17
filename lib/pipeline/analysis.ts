@@ -79,6 +79,14 @@ export async function runAnalysisPass(
   }
 
   const caseRow = await loadCase(client, caseId);
+  // A resolved case is settled: new documents (a corrected statement, a
+  // proof of payment) are filed for the record and become savings-proof
+  // candidates, but re-running the analyst would draft new dispute letters
+  // for a dispute that is over. The pass re-runs only for open cases.
+  if (caseRow.status === "resolved") {
+    summary.caseStatus = caseRow.status;
+    return summary;
+  }
   if (caseRow.status === "intake") {
     await transitionCase(client, caseId, "intake", "analyzing", {
       actor: "agent",
@@ -286,8 +294,10 @@ async function getOrCreateDraft(
 /**
  * Fills the case roll-ups from what the pass actually found: provider and
  * insurer names from the first document that states them, next_deadline
- * from the earliest extracted appeal deadline, amount_disputed from the
- * persisted findings (the findings table is the single source of truth).
+ * from the earliest extracted appeal deadline, and amount_disputed from the
+ * stated balance the family is being asked to pay (patient responsibility,
+ * falling back to the total billed) — the balance under dispute, not the
+ * findings' savings estimate.
  */
 async function refreshCaseRollups(
   client: Queryable,
@@ -302,13 +312,11 @@ async function refreshCaseRollups(
     .sort();
   const nextDeadline = deadlines[0] ?? null;
 
-  const totals = await client.query<{ total: string | null }>(
-    `select coalesce(sum(estimated_savings), 0)::text as total
-       from findings
-      where case_id = $1`,
-    [caseId],
-  );
-  const amountDisputed = Number(totals.rows[0]?.total ?? "0");
+  const statedBalance = docs.find(
+    (doc) => doc.extracted.patient_responsibility !== null || doc.extracted.total_billed !== null,
+  )?.extracted;
+  const amountDisputed =
+    statedBalance?.patient_responsibility ?? statedBalance?.total_billed ?? 0;
 
   await client.query(
     `update cases
