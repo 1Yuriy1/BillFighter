@@ -1,0 +1,16 @@
+ST. AUGUSTINE HOSPITAL
+Patient Billing Office — 1400 Meridian Way
+
+STATEMENT DATE: 08/20/2026
+Patient: Elena Marsh                Account: 88-2042
+Insurer: Meridian Health Plan       Claim: CLM-2026-88412
+Date of Service: 07/02/2026
+
+ITEMIZED CHARGES
+CPT 45378  Diagnostic colonoscopy ................... $500.00
+CPT 00811  Anesthesia, colonoscopy, moderate sedation  $200.00
+
+PATIENT RESPONSIBILITY: $850.00
+TOTAL BALANCE DUE: $850.00
+
+Please remit within 30 days. Questions? Call the billing office.
