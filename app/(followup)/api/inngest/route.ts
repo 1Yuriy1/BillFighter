@@ -9,9 +9,13 @@
  */
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/followup/inngest";
-import { dailyDeadlineCheck, replyClassificationPass } from "@/lib/followup/jobs";
+import {
+  dailyDeadlineCheck,
+  dispatchApprovedActions,
+  replyClassificationPass,
+} from "@/lib/followup/jobs";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [dailyDeadlineCheck, replyClassificationPass],
+  functions: [dailyDeadlineCheck, dispatchApprovedActions, replyClassificationPass],
 });

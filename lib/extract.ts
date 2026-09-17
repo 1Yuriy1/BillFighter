@@ -146,7 +146,10 @@ export async function extractDocument(
 
   let response: Response;
   try {
-    response = await fetch(ANTHROPIC_API_URL, {
+    // Production default; the E2E harness points ANTHROPIC_BASE_URL at the
+    // recorded mock provider so CI never needs live Anthropic credentials.
+    const apiUrl = process.env.ANTHROPIC_BASE_URL ?? ANTHROPIC_API_URL;
+    response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "content-type": "application/json",

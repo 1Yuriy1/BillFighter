@@ -1,10 +1,18 @@
 import { redirect } from "next/navigation";
 import { OrphanActions } from "@/components/wiring/OrphanActions";
 import { PreferencesForm } from "@/components/wiring/PreferencesForm";
+import { SavingsConfirmForm } from "@/components/wiring/SavingsConfirmForm";
 import { SignOutButton } from "@/components/wiring/SignOutButton";
+import { StaffApproveButton } from "@/components/wiring/StaffApproveButton";
 import { StaffQueueTable, type StaffQueueEntry } from "@/components/staff/StaffQueueTable";
+import { DraftReviewCard } from "@/components/actions/DraftReviewCard";
 import { formatDateTime, sortUrgentFirst } from "@/lib/display";
-import { staffConsoleData, staffFamilyRows } from "@/lib/db/queries";
+import {
+  staffConsoleData,
+  staffDraftReviewRows,
+  staffFamilyRows,
+  staffSavingsRows,
+} from "@/lib/db/queries";
 import { withSessionClient } from "@/lib/db/connect";
 import { currentClaims } from "@/lib/session-server";
 
@@ -56,10 +64,12 @@ export default async function StaffPage() {
     redirect("/dashboard");
   }
 
-  const [queue, families] = await withSessionClient(claims, async (client) => {
+  const [queue, families, drafts, savings] = await withSessionClient(claims, async (client) => {
     const entries = await staffConsoleData(client);
     const familyRows = await staffFamilyRows(client);
-    return [entries, familyRows] as const;
+    const draftRows = await staffDraftReviewRows(client);
+    const savingsRows = await staffSavingsRows(client);
+    return [entries, familyRows, draftRows, savingsRows] as const;
   });
 
   const orphans = queue.filter((entry) => entry.kind === "orphan_mail");
@@ -88,6 +98,84 @@ export default async function StaffPage() {
           <div className="mt-3">
             <StaffQueueTable entries={caseQueue} />
           </div>
+        )}
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-slate-900">Drafts awaiting your signature</h2>
+        <p className="mb-3 text-sm text-slate-600">
+          The second signature of the two-human gate. Read the letter, check it against the cited
+          documents, then sign — the family approves first or second, but nothing sends until both
+          humans have signed.
+        </p>
+        {drafts.length === 0 ? (
+          <p className="text-sm text-slate-500" data-testid="staff-drafts-empty">
+            No drafts waiting on staff review.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-5" data-testid="staff-draft-review-list">
+            {drafts.map((draft) => (
+              <li
+                key={draft.id}
+                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+              >
+                <p className="text-sm font-semibold text-slate-900">
+                  {draft.caseLabel}
+                  {draft.userApprovedAt !== null ? (
+                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                      Family approved — waiting on you
+                    </span>
+                  ) : null}
+                </p>
+                <div className="mt-3">
+                  <DraftReviewCard
+                    title={draft.subject ?? `Letter via ${draft.caseLabel}`}
+                    recipient={draft.recipient}
+                    body={draft.body ?? ""}
+                    citations={draft.citations}
+                    status="draft"
+                    userApproved={draft.userApprovedAt !== null}
+                    staffApproved={false}
+                  />
+                </div>
+                <div className="mt-3">
+                  <StaffApproveButton actionId={draft.id} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-slate-900">Savings to confirm</h2>
+        <p className="mb-3 text-sm text-slate-600">
+          Resolved cases waiting on the proof gate: attach the proof (a bill or EOB showing the
+          corrected amount), confirm the savings, and the capped 15% success fee charges — $500
+          maximum, nothing charged without proof.
+        </p>
+        {savings.length === 0 ? (
+          <p className="text-sm text-slate-500" data-testid="staff-savings-empty">
+            No resolved cases waiting on savings confirmation.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-4" data-testid="staff-savings-list">
+            {savings.map((caseRow) => (
+              <li
+                key={caseRow.caseId}
+                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+              >
+                <p className="text-sm font-semibold text-slate-900">{caseRow.caseLabel}</p>
+                <p className="mt-0.5 text-xs text-slate-600">
+                  {caseRow.familyEmail}
+                  {caseRow.amountDisputed !== null
+                    ? ` — disputed amount $${caseRow.amountDisputed.toFixed(2)}`
+                    : ""}
+                </p>
+                <SavingsConfirmForm caseRow={caseRow} />
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

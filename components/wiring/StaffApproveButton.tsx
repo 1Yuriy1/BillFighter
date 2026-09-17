@@ -6,17 +6,18 @@ import { useRouter } from "next/navigation";
 type SubmitState = "idle" | "working" | "recorded" | "completed" | "error";
 
 const FEEDBACK: Record<Exclude<SubmitState, "idle" | "working" | "error">, string> = {
-  recorded: "Your approval is recorded — waiting on the second signature.",
-  completed: "Both approvals in — this letter is queued to send.",
+  recorded: "Your signature is recorded — the family still needs to approve.",
+  completed: "Both signatures in — this letter is queued to send.",
 };
 
 /**
- * The family/caregiver approve button behind the two-human gate: records the
- * session user's approval (RLS + column grants scope the write server-side)
- * and refreshes the server components so approval state renders from the
- * database, never from optimistic local state alone.
+ * The staff approve button behind the two-human gate: records the staff
+ * signature on a draft via the same approval route the family button uses
+ * (the session role decides which slot fills). Feedback states render from
+ * the API's outcome; the server components refresh so gate state always
+ * reads from the database.
  */
-export function ApproveDraftButton({ actionId }: { actionId: string }) {
+export function StaffApproveButton({ actionId }: { actionId: string }) {
   const router = useRouter();
   const [state, setState] = useState<SubmitState>("idle");
 
@@ -38,7 +39,11 @@ export function ApproveDraftButton({ actionId }: { actionId: string }) {
 
   if (state === "recorded" || state === "completed") {
     return (
-      <p className="text-sm font-medium text-green-700" role="status">
+      <p
+        className="text-sm font-medium text-green-700"
+        role="status"
+        data-testid="staff-approve-feedback"
+      >
         {FEEDBACK[state]}
       </p>
     );
@@ -49,14 +54,15 @@ export function ApproveDraftButton({ actionId }: { actionId: string }) {
         type="button"
         onClick={approve}
         disabled={state === "working"}
-        data-testid="approve-draft-button"
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+        data-testid="staff-approve-button"
+        data-action-id={actionId}
+        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
       >
-        {state === "working" ? "Recording…" : "Approve to send"}
+        {state === "working" ? "Recording…" : "Approve as staff"}
       </button>
       {state === "error" ? (
         <span className="text-sm text-red-700" role="alert">
-          Could not record your approval — try again.
+          Could not record the staff approval — try again.
         </span>
       ) : null}
     </span>

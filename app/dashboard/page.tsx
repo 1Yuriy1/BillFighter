@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { CaregiverAccess } from "@/components/wiring/CaregiverAccess";
 import { ApproveDraftButton } from "@/components/wiring/ApproveDraftButton";
 import { PreferencesForm } from "@/components/wiring/PreferencesForm";
+import { UploadDocumentForm } from "@/components/wiring/UploadDocumentForm";
 import { SignOutButton } from "@/components/wiring/SignOutButton";
 import { DraftReviewCard } from "@/components/actions/DraftReviewCard";
 import { CaseCard } from "@/components/cases/CaseCard";
@@ -53,6 +54,10 @@ function CaseSection({ caseView }: { caseView: FamilyCaseView }) {
           ))}
         </div>
       ) : null}
+
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <UploadDocumentForm caseId={caseView.id} />
+      </div>
 
       <div className="mt-5">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -114,10 +119,15 @@ export default async function DashboardPage() {
       ) : null}
 
       {dashboard.cases.length === 0 ? (
-        <p className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-slate-600">
-          No cases yet. Once a bill or letter arrives by email, it shows up here with a
-          plain-language explanation.
-        </p>
+        <div className="mt-8 flex flex-col gap-4 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-slate-600">
+          <p>
+            No cases yet. Upload a bill or letter here — or forward it by email — and it shows up as
+            a case with a plain-language explanation.
+          </p>
+          <div className="mx-auto text-left">
+            <UploadDocumentForm newCase label="Start your first case" />
+          </div>
+        </div>
       ) : (
         <div className="mt-8 flex flex-col gap-6">
           {dashboard.cases.map((caseView) => (

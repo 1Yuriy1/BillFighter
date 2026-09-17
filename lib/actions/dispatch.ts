@@ -29,6 +29,7 @@
 import type { Client as PgClient, PoolClient, QueryResultRow } from "pg";
 import { backoffDelayMs, followUpAt, MAX_SEND_ATTEMPTS } from "./timing";
 import { SendError, type ChannelAdapter, type OutboundAction } from "./types";
+import { advanceCaseAfterSend } from "@/lib/pipeline/caseStatus";
 
 type Queryable = PoolClient | PgClient;
 
@@ -209,6 +210,10 @@ async function dispatchOne(
           (result.providerId ? ` (provider id ${result.providerId})` : "") +
           ` — follow-up due ${followup.toISOString().slice(0, 10)}`,
       ]);
+      // The letter is out — the case moves to waiting_reply (spec state
+      // machine, send edge). Walks forward through in_progress when the
+      // approval route's own advance has not landed yet.
+      await advanceCaseAfterSend(client, action.case_id);
       await client.query("commit");
       return "sent";
     } catch (error) {

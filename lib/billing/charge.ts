@@ -146,11 +146,14 @@ async function loadCaseContext(
     );
   }
 
-  // The proof gate: the document must exist, be THIS case's, and be a bill
-  // or EOB — "the new bill or EOB showing the corrected amount".
+  // The proof gate: the document must exist, be THIS case's, and be a bill,
+  // itemized statement, or EOB — "the new bill or EOB showing the corrected
+  // amount". Itemized statements are bills for proof purposes: a corrected
+  // itemized statement is exactly what a billing office sends after a
+  // reprocessed claim.
   const proof = await client.query(
     `select 1 from documents
-      where id = $1 and case_id = $2 and doc_type in ('bill', 'eob')`,
+      where id = $1 and case_id = $2 and doc_type in ('bill', 'itemized', 'eob')`,
     [input.proofDocumentId, input.caseId],
   );
   if (proof.rows.length === 0) {

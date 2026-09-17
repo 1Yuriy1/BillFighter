@@ -91,7 +91,10 @@ export function makeStripeGateway(options: StripeGatewayOptions = {}): PaymentGa
   ): Promise<T> {
     let response: Response;
     try {
-      response = await doFetch(`${STRIPE_API_BASE}${path}`, {
+      // Production default; the E2E harness points STRIPE_BASE_URL at the mock
+      // provider so CI exercises the real adapter against recorded responses.
+      const apiBase = process.env.STRIPE_BASE_URL ?? STRIPE_API_BASE;
+      response = await doFetch(`${apiBase}${path}`, {
         method,
         headers: {
           Authorization: `Bearer ${secretKey}`,
