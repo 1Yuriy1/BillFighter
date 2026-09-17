@@ -47,6 +47,14 @@ export interface DispatchSummary {
   parked: number;
   /** Rows that were due but no longer dispatchable when locked. */
   skipped: number;
+  /**
+   * Skipped because the family paused automated messages
+   * (users.automated_messages_paused_at). The action stays 'approved' and
+   * dispatches on a later run once un-paused — nothing is lost, nothing is
+   * sent (the crisis-switch invariant: pausing halts a family's automated
+   * messages immediately, even mid-run).
+   */
+  paused: number;
 }
 
 interface DueActionRow extends QueryResultRow {
@@ -59,6 +67,7 @@ interface DueActionRow extends QueryResultRow {
   status: string;
   send_attempts: number;
   authorization_signed_at: Date | null;
+  automated_messages_paused_at: Date | null;
 }
 
 /**
@@ -87,18 +96,20 @@ export async function dispatchDueActions(
 ): Promise<DispatchSummary> {
   const due = await client.query<DueActionRow>(
     `select a.id, a.case_id, a.channel, a.recipient, a.subject, a.body,
-            a.status, a.send_attempts, u.authorization_signed_at
+            a.status, a.send_attempts, u.authorization_signed_at,
+            u.automated_messages_paused_at
        from actions a
        join cases c on c.id = a.case_id
        left join users u on u.id = c.user_id
       where a.status = 'approved'
         and (a.next_attempt_at is null or a.next_attempt_at <= $1)
+        and u.automated_messages_paused_at is null
       order by a.created_at`,
     [options.now],
   );
 
   const byChannel = new Map(adapters.map((adapter) => [adapter.channel, adapter]));
-  const summary: DispatchSummary = { sent: 0, retried: 0, parked: 0, skipped: 0 };
+  const summary: DispatchSummary = { sent: 0, retried: 0, parked: 0, skipped: 0, paused: 0 };
 
   for (const row of due.rows) {
     const outcome = await dispatchOne(client, byChannel, row, options);
@@ -120,7 +131,8 @@ async function dispatchOne(
   try {
     const locked = await client.query<DueActionRow>(
       `select a.id, a.case_id, a.channel, a.recipient, a.subject, a.body,
-              a.status, a.send_attempts, u.authorization_signed_at
+              a.status, a.send_attempts, u.authorization_signed_at,
+              u.automated_messages_paused_at
          from actions a
          join cases c on c.id = a.case_id
          left join users u on u.id = c.user_id
@@ -138,6 +150,15 @@ async function dispatchOne(
     // already filtered on status, but between query and lock another runner
     // may have sent it; and regardless, nothing non-approved passes here.
     assertDispatchable(action);
+
+    // Crisis switch: a family that paused automated messages holds their
+    // sends — even when the pause landed after the due query selected the
+    // row. The action stays 'approved' (nothing lost) and dispatches on a
+    // later run once un-paused.
+    if (action.automated_messages_paused_at !== null) {
+      await client.query("commit");
+      return "paused";
+    }
 
     const adapter = byChannel.get(action.channel);
     if (adapter === undefined) {
