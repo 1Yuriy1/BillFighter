@@ -1,6 +1,11 @@
 "use client";
 
-export type NotificationLevel = "everything" | "action_needed";
+// One source of truth with the scheduler: lib/followup/notifications.ts
+// derives the type from the migration enum's values and carries the runtime
+// guard the server side uses to parse stored preferences.
+import type { NotificationLevel } from "@/lib/followup/notifications";
+
+export type { NotificationLevel };
 
 interface NotificationLevelPickerProps {
   /** Currently selected level (the family's saved preference). */
