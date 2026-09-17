@@ -1,10 +1,10 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { Client } from "pg";
 import { DATABASE_URL } from "./db";
 
 /**
- * Recreates the test database and applies db/migrations/001_init.sql.
+ * Recreates the test database and applies db/migrations/*.sql in name order.
  * Runs once before the whole suite; tests then connect per-session.
  */
 export default async function globalSetup(): Promise<void> {
@@ -38,8 +38,13 @@ export default async function globalSetup(): Promise<void> {
   const conn = new Client({ connectionString: DATABASE_URL });
   await conn.connect();
   try {
-    const migrationPath = path.resolve(process.cwd(), "db/migrations/001_init.sql");
-    await conn.query(readFileSync(migrationPath, "utf8"));
+    const migrationsDir = path.resolve(process.cwd(), "db/migrations");
+    const migrations = readdirSync(migrationsDir)
+      .filter((name) => name.endsWith(".sql"))
+      .sort();
+    for (const name of migrations) {
+      await conn.query(readFileSync(path.join(migrationsDir, name), "utf8"));
+    }
   } finally {
     await conn.end();
   }
