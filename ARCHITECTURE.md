@@ -16,7 +16,7 @@ traces to a document via `actions.citations`; every case-scoped mutation lands i
 | Subsystem           | Home                                               | Notes                                                                        |
 | ------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------- |
 | Intake              | `app/(intake)/`, `lib/intake/`                     | Upload API, Postmark inbound webhook (`/api/inbound`), alias generator       |
-| Extraction          | `lib/extract.ts`                                   | Strict-JSON Claude contract (`ExtractedDocument`), math check (`verifyMath`) |
+| Extraction          | `lib/extract.ts`, `lib/mathCheck.ts`               | Strict-JSON Claude contract (`ExtractedDocument`), math check (`verifyMath`) |
 | Analysis            | `lib/rules.ts`, `lib/analyze.ts`                   | Deterministic rules + AI analyst; findings carry source/confidence           |
 | Actions & letters   | `lib/actions/`, `components/actions/`              | Template engine, draft editor with evidence highlights                       |
 | Follow-up engine    | `lib/followup/`                                    | Inngest jobs: deadline tiers, reply classification                           |
