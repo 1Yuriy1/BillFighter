@@ -11,7 +11,10 @@ import type { CaseStatus } from "./caseState";
 export const STATUS_META: Record<CaseStatus, { label: string; badgeClass: string }> = {
   intake: { label: "Getting started", badgeClass: "bg-slate-100 text-slate-700" },
   analyzing: { label: "Reviewing your documents", badgeClass: "bg-blue-100 text-blue-800" },
-  awaiting_approval: { label: "Waiting for your approval", badgeClass: "bg-amber-100 text-amber-800" },
+  awaiting_approval: {
+    label: "Waiting for your approval",
+    badgeClass: "bg-amber-100 text-amber-800",
+  },
   in_progress: { label: "Working on it", badgeClass: "bg-sky-100 text-sky-800" },
   waiting_reply: { label: "Waiting for a reply", badgeClass: "bg-violet-100 text-violet-800" },
   resolved: { label: "Resolved", badgeClass: "bg-green-100 text-green-800" },
@@ -83,9 +86,7 @@ export function formatDateTime(iso: string): string {
 }
 
 /** Stable urgent-first ordering: urgent entries keep their relative order, then the rest. */
-export function sortUrgentFirst<T extends { urgent?: boolean }>(
-  entries: readonly T[],
-): T[] {
+export function sortUrgentFirst<T extends { urgent?: boolean }>(entries: readonly T[]): T[] {
   return [
     ...entries.filter((entry) => entry.urgent === true),
     ...entries.filter((entry) => entry.urgent !== true),

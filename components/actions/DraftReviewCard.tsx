@@ -137,7 +137,9 @@ export function DraftReviewCard({
       <section aria-label="Approvals">
         <h4 className="text-sm font-semibold text-slate-900">Approvals</h4>
         <ul className="mt-1 space-y-1 text-sm text-slate-700">
-          <li data-testid="user-approval">{userApproved ? "Received" : "Pending"} — your approval</li>
+          <li data-testid="user-approval">
+            {userApproved ? "Received" : "Pending"} — your approval
+          </li>
           <li data-testid="staff-approval">
             {staffApproved ? "Received" : "Pending"} — staff approval
           </li>

@@ -9,9 +9,7 @@ describe("NotificationLevelPicker", () => {
     expect(screen.getByText("How much should we email you?")).toBeInTheDocument();
     // The accessible name aggregates the label + its description, so match by prefix.
     expect(screen.getByRole("radio", { name: /Everything/ })).toBeInTheDocument();
-    expect(
-      screen.getByRole("radio", { name: /Only what needs you/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Only what needs you/ })).toBeInTheDocument();
     expect(screen.getByText(/plus when a case is resolved/)).toBeInTheDocument();
   });
 

@@ -1,10 +1,5 @@
 import type { CaseStatus } from "@/lib/caseState";
-import {
-  caseStatusBadgeClass,
-  caseStatusLabel,
-  formatDate,
-  formatUsd,
-} from "@/lib/display";
+import { caseStatusBadgeClass, caseStatusLabel, formatDate, formatUsd } from "@/lib/display";
 import { DeadlineBanner } from "./DeadlineBanner";
 
 interface CaseCardProps {

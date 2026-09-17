@@ -16,9 +16,7 @@ describe("CaseCard", () => {
       />,
     );
     expect(screen.getByText("Aetna bill from Riverwalk Imaging")).toBeInTheDocument();
-    expect(screen.getByTestId("case-status-badge")).toHaveTextContent(
-      "Waiting for your approval",
-    );
+    expect(screen.getByTestId("case-status-badge")).toHaveTextContent("Waiting for your approval");
     expect(screen.getByTestId("amount-disputed")).toHaveTextContent("$1,249.50");
     expect(screen.getByTestId("amount-saved")).toHaveTextContent("$418.00");
   });
@@ -93,8 +91,9 @@ describe("CaseCard", () => {
         href="/cases/1"
       />,
     );
-    expect(
-      screen.getByRole("link", { name: /Aetna bill from Riverwalk Imaging/ }),
-    ).toHaveAttribute("href", "/cases/1");
+    expect(screen.getByRole("link", { name: /Aetna bill from Riverwalk Imaging/ })).toHaveAttribute(
+      "href",
+      "/cases/1",
+    );
   });
 });

@@ -24,7 +24,9 @@ describe("CaseTimeline", () => {
     expect(screen.getByText("System")).toBeInTheDocument();
     expect(screen.getByText("Our team")).toBeInTheDocument();
     expect(screen.getByText("Bill from Riverwalk Imaging received.")).toBeInTheDocument();
-    expect(screen.getByText("Staff reviewer approved the appeal letter after checking the evidence.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Staff reviewer approved the appeal letter after checking the evidence."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Sep 14, 2026, 3:03 PM")).toBeInTheDocument();
   });
 

@@ -1,11 +1,7 @@
 import { formatDateTime, sortUrgentFirst } from "@/lib/display";
 
 export type StaffQueueKind =
-  | "draft_review"
-  | "low_confidence"
-  | "failed_send"
-  | "stuck"
-  | "deadline";
+  "draft_review" | "low_confidence" | "failed_send" | "stuck" | "deadline";
 
 export interface StaffQueueEntry {
   id: string;
@@ -25,7 +21,10 @@ export interface StaffQueueEntry {
 
 const KIND_META: Record<StaffQueueKind, { label: string; chipClass: string }> = {
   draft_review: { label: "Draft needs review", chipClass: "bg-amber-100 text-amber-800" },
-  low_confidence: { label: "Low-confidence extraction", chipClass: "bg-orange-100 text-orange-800" },
+  low_confidence: {
+    label: "Low-confidence extraction",
+    chipClass: "bg-orange-100 text-orange-800",
+  },
   failed_send: { label: "Send failed", chipClass: "bg-rose-100 text-rose-800" },
   stuck: { label: "Stuck case", chipClass: "bg-gray-100 text-gray-700" },
   deadline: { label: "Deadline alert", chipClass: "bg-blue-100 text-blue-800" },
