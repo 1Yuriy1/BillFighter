@@ -73,7 +73,8 @@ export async function persistUploadedDocument(
   try {
     const result = await extractDocument(text);
     const invented = findInventedValues(text, result.extracted);
-    const reviewReason = mathReviewReason(result.mathCheck) ?? inventedReviewReason(invented.length);
+    const reviewReason =
+      mathReviewReason(result.mathCheck) ?? inventedReviewReason(invented.length);
     return insertDocument(session, {
       caseId: input.caseId,
       filePath,

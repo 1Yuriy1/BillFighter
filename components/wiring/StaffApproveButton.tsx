@@ -39,7 +39,11 @@ export function StaffApproveButton({ actionId }: { actionId: string }) {
 
   if (state === "recorded" || state === "completed") {
     return (
-      <p className="text-sm font-medium text-green-700" role="status" data-testid="staff-approve-feedback">
+      <p
+        className="text-sm font-medium text-green-700"
+        role="status"
+        data-testid="staff-approve-feedback"
+      >
         {FEEDBACK[state]}
       </p>
     );

@@ -21,12 +21,7 @@
  * on (case_id, subject) — the same get-or-create pattern the seed uses.
  */
 import type { Client as PgClient, PoolClient } from "pg";
-import {
-  analyzeCase,
-  AnalysisError,
-  type AiFinding,
-  type AnalystResult,
-} from "@/lib/analyze";
+import { analyzeCase, AnalysisError, type AiFinding, type AnalystResult } from "@/lib/analyze";
 import type { ExtractedDocument } from "@/lib/extract";
 import { availableTemplates, buildDraft } from "@/lib/letters";
 import type { Finding } from "@/lib/rules";
@@ -95,20 +90,21 @@ export async function runAnalysisPass(
     caseRow.status = "analyzing";
   }
 
-  const ruleFindings = runRules(docs.map((doc) => doc.extracted), now);
+  const ruleFindings = runRules(
+    docs.map((doc) => doc.extracted),
+    now,
+  );
 
   let analyst: AnalystResult | null = null;
   try {
-    analyst = await analyzeCase(
-      {
-        documents: docs,
-        ruleFindings,
-        // MVP: plan terms ride in the documents (the plan doc); the profile
-        // field arrives with production signup.
-        planTerms: "",
-        today: now,
-      },
-    );
+    analyst = await analyzeCase({
+      documents: docs,
+      ruleFindings,
+      // MVP: plan terms ride in the documents (the plan doc); the profile
+      // field arrives with production signup.
+      planTerms: "",
+      today: now,
+    });
   } catch (error) {
     if (error instanceof AnalysisError) {
       await client.query("insert into events (case_id, actor, message) values ($1, 'agent', $2)", [
@@ -197,10 +193,9 @@ async function loadCase(client: Queryable, caseId: string): Promise<CaseRow> {
 }
 
 async function caseStatus(client: Queryable, caseId: string): Promise<string | null> {
-  const result = await client.query<{ status: string }>(
-    "select status from cases where id = $1",
-    [caseId],
-  );
+  const result = await client.query<{ status: string }>("select status from cases where id = $1", [
+    caseId,
+  ]);
   return result.rows[0]?.status ?? null;
 }
 
@@ -220,7 +215,14 @@ async function persistFinding(
        select 1 from findings
         where case_id = $1 and kind = $2 and description = $3
      )`,
-    [caseId, finding.kind, finding.description, finding.estimated_savings, finding.confidence, finding.source],
+    [
+      caseId,
+      finding.kind,
+      finding.description,
+      finding.estimated_savings,
+      finding.confidence,
+      finding.source,
+    ],
   );
   return (result.rowCount ?? 0) > 0;
 }
@@ -248,8 +250,7 @@ async function recordAnalystEvents(
   ruleFindings: Finding[],
 ): Promise<void> {
   const urgentCount =
-    analyst.findings.filter((f) => f.urgent).length +
-    ruleFindings.filter((f) => f.urgent).length;
+    analyst.findings.filter((f) => f.urgent).length + ruleFindings.filter((f) => f.urgent).length;
   const parts = [
     `${analyst.findings.length + ruleFindings.length} problem${analyst.findings.length + ruleFindings.length === 1 ? "" : "s"} found` +
       (urgentCount > 0 ? `, ${urgentCount} urgent` : ""),
@@ -315,8 +316,7 @@ async function refreshCaseRollups(
   const statedBalance = docs.find(
     (doc) => doc.extracted.patient_responsibility !== null || doc.extracted.total_billed !== null,
   )?.extracted;
-  const amountDisputed =
-    statedBalance?.patient_responsibility ?? statedBalance?.total_billed ?? 0;
+  const amountDisputed = statedBalance?.patient_responsibility ?? statedBalance?.total_billed ?? 0;
 
   await client.query(
     `update cases

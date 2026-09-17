@@ -35,9 +35,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "signed_out" }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => null)) as
-    | { job?: unknown; caseId?: unknown }
-    | null;
+  const body = (await request.json().catch(() => null)) as {
+    job?: unknown;
+    caseId?: unknown;
+  } | null;
   const job = typeof body?.job === "string" ? body.job : "";
   const caseId = typeof body?.caseId === "string" ? body.caseId : null;
   const now = new Date();
@@ -55,9 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     switch (job) {
       case "deadline":
         return NextResponse.json(
-          await withJobClient((client) =>
-            runDeadlineCheck(client, { now, deliver: deliverEmail }),
-          ),
+          await withJobClient((client) => runDeadlineCheck(client, { now, deliver: deliverEmail })),
         );
       case "replies":
         return NextResponse.json(
@@ -71,9 +70,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         );
       case "dispatch":
         return NextResponse.json(
-          await withJobClient((client) =>
-            dispatchDueActions(client, channelAdapters(), { now }),
-          ),
+          await withJobClient((client) => dispatchDueActions(client, channelAdapters(), { now })),
         );
       case "analysis":
         if (caseId === null) {

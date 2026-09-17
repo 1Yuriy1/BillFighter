@@ -83,9 +83,10 @@ function extractionResponse() {
  */
 function analystResponse(requestBody) {
   const brief = JSON.parse(requestBody.messages[0].content);
-  const bill = brief.documents.find(
-    (doc) => doc.extracted !== null && doc.extracted.doc_type === "itemized",
-  ) ?? brief.documents[0];
+  const bill =
+    brief.documents.find(
+      (doc) => doc.extracted !== null && doc.extracted.doc_type === "itemized",
+    ) ?? brief.documents[0];
   const total = bill.extracted.total_billed;
   const responsibility = bill.extracted.patient_responsibility;
   return {
@@ -135,7 +136,8 @@ function analystResponse(requestBody) {
       },
       {
         title: "Hold payment while the dispute is open",
-        detail: "Do not pay the statement while the dispute is open; ask the billing office to flag the claim under review.",
+        detail:
+          "Do not pay the statement while the dispute is open; ask the billing office to flag the claim under review.",
       },
     ],
     summary:
@@ -171,9 +173,14 @@ const server = createServer(async (request, response) => {
     } catch {
       return sendJson(response, 400, { error: "bad json" });
     }
-    const isExtraction = parsed.system?.startsWith("You are a medical billing document extraction engine");
+    const isExtraction = parsed.system?.startsWith(
+      "You are a medical billing document extraction engine",
+    );
     const payload = isExtraction ? extractionResponse() : analystResponse(parsed);
-    outbox.anthropic.push({ kind: isExtraction ? "extraction" : "analysis", at: new Date().toISOString() });
+    outbox.anthropic.push({
+      kind: isExtraction ? "extraction" : "analysis",
+      at: new Date().toISOString(),
+    });
     return sendJson(response, 200, {
       id: `msg_mock_${outbox.anthropic.length}`,
       type: "message",
@@ -200,7 +207,8 @@ const server = createServer(async (request, response) => {
 
   // ---- Stripe: customer create + read (charge reads the saved card) ----
   const customerCreate = url.pathname === "/stripe/v1/customers" && request.method === "POST";
-  const customerRead = /^\/stripe\/v1\/customers\/[^/]+$/.test(url.pathname) && request.method === "GET";
+  const customerRead =
+    /^\/stripe\/v1\/customers\/[^/]+$/.test(url.pathname) && request.method === "GET";
   if (customerCreate || customerRead) {
     let email = undefined;
     if (customerCreate) {
@@ -231,7 +239,9 @@ const server = createServer(async (request, response) => {
       description: params.get("description"),
       receipt_email: params.get("receipt_email"),
       metadata: Object.fromEntries(
-        [...params.entries()].filter(([key]) => key.startsWith("metadata[")).map(([key, value]) => [key, value]),
+        [...params.entries()]
+          .filter(([key]) => key.startsWith("metadata["))
+          .map(([key, value]) => [key, value]),
       ),
     };
     outbox.stripe.push(entry);
@@ -242,10 +252,15 @@ const server = createServer(async (request, response) => {
       latest_charge: `ch_mock_${paymentSeq}`,
     });
   }
-  const chargeRead = /^\/stripe\/v1\/charges\/[^/]+$/.test(url.pathname) && request.method === "GET";
+  const chargeRead =
+    /^\/stripe\/v1\/charges\/[^/]+$/.test(url.pathname) && request.method === "GET";
   if (chargeRead) {
     const id = url.pathname.split("/").pop();
-    return sendJson(response, 200, { id, object: "charge", receipt_url: `https://mock.stripe/receipts/${id}` });
+    return sendJson(response, 200, {
+      id,
+      object: "charge",
+      receipt_url: `https://mock.stripe/receipts/${id}`,
+    });
   }
 
   // ---- Test-only recorder ----

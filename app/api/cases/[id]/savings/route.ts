@@ -14,11 +14,7 @@
  */
 import { NextResponse } from "next/server";
 import type { QueryResultRow } from "pg";
-import {
-  confirmSavingsAndCharge,
-  ensureStripeCustomer,
-  FeeError,
-} from "@/lib/billing/charge";
+import { confirmSavingsAndCharge, ensureStripeCustomer, FeeError } from "@/lib/billing/charge";
 import { makeStripeGateway } from "@/lib/billing/stripe";
 import { GatewayError } from "@/lib/billing/gateway";
 import { makePostmarkEmailAdapter } from "@/lib/actions/adapters/postmark-email";
@@ -60,8 +56,7 @@ export async function POST(
 
   const { id } = await params;
   const body = (await request.json().catch(() => null)) as SavingsBody | null;
-  const proofDocumentId =
-    typeof body?.proofDocumentId === "string" ? body.proofDocumentId : null;
+  const proofDocumentId = typeof body?.proofDocumentId === "string" ? body.proofDocumentId : null;
   const proofKind = body?.proofKind === "eob" ? ("eob" as const) : ("new_bill" as const);
   const confirmedSavings = body?.confirmedSavings;
   if (

@@ -140,7 +140,11 @@ export function SavingsConfirmForm({ caseRow }: { caseRow: StaffSavingsRow }) {
         {state === "working" ? "Confirming…" : "Confirm savings and charge fee"}
       </button>
       {message !== null && state !== "error" ? (
-        <p className="text-sm font-medium text-green-700" role="status" data-testid="savings-feedback">
+        <p
+          className="text-sm font-medium text-green-700"
+          role="status"
+          data-testid="savings-feedback"
+        >
           {message}
         </p>
       ) : null}

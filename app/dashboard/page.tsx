@@ -121,8 +121,8 @@ export default async function DashboardPage() {
       {dashboard.cases.length === 0 ? (
         <div className="mt-8 flex flex-col gap-4 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-slate-600">
           <p>
-            No cases yet. Upload a bill or letter here — or forward it by email — and it shows up
-            as a case with a plain-language explanation.
+            No cases yet. Upload a bill or letter here — or forward it by email — and it shows up as
+            a case with a plain-language explanation.
           </p>
           <div className="mx-auto text-left">
             <UploadDocumentForm newCase label="Start your first case" />

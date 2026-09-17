@@ -237,9 +237,7 @@ test("full pipeline: upload to proof-gated fee on one synthetic case", async ({
   // router.refresh() re-renders the draft card from the database, which
   // remounts the button and drops its transient client message — the
   // durable signal is the server-rendered approvals list.
-  await expect(
-    section.getByText("Received — your approval").first(),
-  ).toBeVisible();
+  await expect(section.getByText("Received — your approval").first()).toBeVisible();
   const actionRow = (
     await db.query<{ id: string }>(
       `select a.id from actions a
@@ -425,9 +423,10 @@ test("full pipeline: upload to proof-gated fee on one synthetic case", async ({
     confirmed_savings: string;
     status: string;
     stripe_charge_id: string | null;
-  }>(`select fee_cents, confirmed_savings, status, stripe_charge_id from payments where case_id = $1`, [
-    caseId,
-  ]);
+  }>(
+    `select fee_cents, confirmed_savings, status, stripe_charge_id from payments where case_id = $1`,
+    [caseId],
+  );
   expect(payment.rows).toHaveLength(1);
   expect(payment.rows[0].status).toBe("succeeded");
   expect(payment.rows[0].fee_cents).toBe(FEE_CENTS);

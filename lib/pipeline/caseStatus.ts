@@ -23,10 +23,7 @@ type Queryable = PoolClient | PgClient;
  * the approval transaction. Idempotent by the guarded WHERE: a case already
  * moved (or a seeded case in another state) leaves rowCount 0, not an error.
  */
-export async function advanceCaseAfterApproval(
-  client: Queryable,
-  actionId: string,
-): Promise<void> {
+export async function advanceCaseAfterApproval(client: Queryable, actionId: string): Promise<void> {
   const action = await client.query<{ case_id: string }>(
     "select case_id from actions where id = $1",
     [actionId],

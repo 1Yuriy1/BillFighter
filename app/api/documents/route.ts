@@ -62,10 +62,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (caseIdField !== null) {
       // RLS scoping makes "no rows" mean "not yours or not there" — the same
       // response either way, so ids cannot be probed.
-      const visible = await session.query<{ id: string }>(
-        "select id from cases where id = $1",
-        [caseIdField],
-      );
+      const visible = await session.query<{ id: string }>("select id from cases where id = $1", [
+        caseIdField,
+      ]);
       if (visible.rows.length === 0) {
         return null;
       }

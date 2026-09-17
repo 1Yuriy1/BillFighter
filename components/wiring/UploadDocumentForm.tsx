@@ -110,9 +110,11 @@ export function UploadDocumentForm({
             ? `Document received — ${result.findingsRecorded} finding${
                 result.findingsRecorded === 1 ? "" : "s"
               } recorded${
-                result?.draftsCreated ? `, ${result.draftsCreated} letter draft${
-                  result.draftsCreated === 1 ? "" : "s"
-                } queued for review below` : ""
+                result?.draftsCreated
+                  ? `, ${result.draftsCreated} letter draft${
+                      result.draftsCreated === 1 ? "" : "s"
+                    } queued for review below`
+                  : ""
               }.`
             : MESSAGES.done}
         </p>
