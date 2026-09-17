@@ -605,7 +605,7 @@ export async function staffSavingsRows(client: Queryable): Promise<StaffSavingsR
     `select id, case_id, doc_type, created_at
        from documents
       where case_id = any($1::uuid[])
-        and doc_type in ('bill', 'eob')
+        and doc_type in ('bill', 'itemized', 'eob')
       order by created_at`,
     [caseRows.rows.map((row) => row.id as string)],
   );

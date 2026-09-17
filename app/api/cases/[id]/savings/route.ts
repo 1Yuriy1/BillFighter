@@ -21,6 +21,7 @@ import {
 } from "@/lib/billing/charge";
 import { makeStripeGateway } from "@/lib/billing/stripe";
 import { GatewayError } from "@/lib/billing/gateway";
+import { makePostmarkEmailAdapter } from "@/lib/actions/adapters/postmark-email";
 import { withServiceClient } from "@/lib/db/connect";
 import { currentClaims } from "@/lib/session-server";
 
@@ -100,6 +101,18 @@ export async function POST(
           note: typeof body?.note === "string" ? body.note : undefined,
           now: new Date(),
           gateway,
+          // The family's receipt rides the same Postmark email channel as
+          // every other outbound message; the paymentId keeps the send
+          // idempotent under retries.
+          deliverReceipt: async (message) => {
+            await makePostmarkEmailAdapter().send({
+              id: `receipt-${message.paymentId}`,
+              channel: "email",
+              recipient: message.to,
+              subject: message.subject,
+              body: message.body,
+            });
+          },
         }),
       );
     });
